@@ -286,22 +286,19 @@ def jupyter_login(force=True):
 
     If force=False, we'll only attempt to auto-login, otherwise we'll prompt the user
     """
-    key = None
-    if 'google.colab' in sys.modules:
-        key = jupyter.attempt_colab_login(run.api.app_url)
-        if key:
-            os.environ[env.API_KEY] = key
-            util.write_netrc(run.api.api_url, "user", key)
-    if not key and force:
-        termerror(
-            "Not authenticated.  Copy a key from https://app.wandb.ai/authorize")
-        key = getpass.getpass("API Key: ").strip()
-        if len(key) == 40:
-            os.environ[env.API_KEY] = key
-            util.write_netrc(run.api.api_url, "user", key)
-        else:
-            raise ValueError("API Key must be 40 characters long")
-    return key
+    def get_api_key_from_browser():
+        key, anonymous = None, False
+        if 'google.colab' in sys.modules:
+            key = jupyter.attempt_colab_login(run.api.app_url)
+        if not key and os.environ.get(env.ANONYMOUS) == "enable":
+            key = run.api.create_anonymous_api_key()
+            anonymous = True
+        if not key and force:
+            termerror("Not authenticated.  Copy a key from https://app.wandb.ai/authorize")
+            key = getpass.getpass("API Key: ").strip()
+        return key, anonymous
+
+    return util.prompt_api_key(run.api, browser_callback=get_api_key_from_browser)
 
 
 def _init_jupyter(run):
@@ -315,12 +312,12 @@ def _init_jupyter(run):
     # I also disabled run logging because we're rairly using it.
     # try_to_set_up_global_logging()
     # run.enable_logging()
+    os.environ[env.JUPYTER] = "true"
 
     if not run.api.api_key:
         jupyter_login()
         # Ensure our api client picks up the new key
         run.api.reauth()
-    os.environ["WANDB_JUPYTER"] = "true"
     run.resume = "allow"
     display(HTML('''
         Notebook configured with <a href="https://wandb.com" target="_blank">W&B</a>. You can <a href="{}" target="_blank">open</a> the run page, or call <code>%%wandb</code>
@@ -499,7 +496,7 @@ def monitor(options={}):
 
     class Monitor():
         def __init__(self, options={}):
-            if os.getenv("WANDB_JUPYTER"):
+            if os.getenv(env.JUPYTER):
                 display(jupyter.Run())
             else:
                 self.rm = False
@@ -887,7 +884,7 @@ def init(job_type=None, dir=None, config=None, project=None, entity=None, reinit
                 termerror(
                     "No credentials found.  Run \"wandb login\" or \"wandb off\" to disable wandb")
             else:
-                if run.check_anonymous():
+                if util.prompt_api_key(api):
                     _init_headless(run)
                 else:
                     termlog(

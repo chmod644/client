@@ -464,13 +464,12 @@ def test_signup(runner, empty_netrc, local_netrc, mocker, monkeypatch):
         def prompt(*args, **kwargs):
             #raise click.exceptions.Abort()
             return DUMMY_API_KEY
-        mocker.patch("click.prompt", prompt)
+        mocker.patch("wandb.util.prompt_api_key", prompt)
         result = runner.invoke(cli.login)
         print('Output: ', result.output)
         print('Exception: ', result.exception)
         print('Traceback: ', traceback.print_tb(result.exc_info[2]))
         assert result.exit_code == 0
-        assert "https://app.wandb.ai/authorize" in result.output
         assert "Successfully logged in to Weights & Biases!" in result.output
 
 def test_init_new_login_no_browser(runner, empty_netrc, local_netrc, request_mocker, query_projects, query_viewer, monkeypatch):
