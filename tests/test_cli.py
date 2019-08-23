@@ -480,7 +480,8 @@ def test_init_new_login_no_browser(runner, empty_netrc, local_netrc, request_moc
         # If the test was run from a directory containing .wandb, then __stage_dir__
         # was '.wandb' when imported by api.py, reload to fix. UGH!
         reload(wandb)
-        result = runner.invoke(cli.init, input="%s\nvanpelt" % DUMMY_API_KEY)
+        runner.invoke(cli.login, [DUMMY_API_KEY])
+        result = runner.invoke(cli.init, input="vanpelt")
         print('Output: ', result.output)
         print('Exception: ', result.exception)
         print('Traceback: ', traceback.print_tb(result.exc_info[2]))
@@ -523,8 +524,8 @@ def test_init_reinit(runner, empty_netrc, local_netrc, request_mocker, query_pro
     query_projects(request_mocker)
     with runner.isolated_filesystem():
         os.mkdir('wandb')
-        result = runner.invoke(
-            cli.init, input="%s\nvanpelt\n" % DUMMY_API_KEY)
+        runner.invoke(cli.login, [DUMMY_API_KEY])
+        result = runner.invoke(cli.init, input="vanpelt\n")
         print(result.output)
         print(result.exception)
         print(traceback.print_tb(result.exc_info[2]))
@@ -543,6 +544,7 @@ def test_init_add_login(runner, empty_netrc, local_netrc, request_mocker, query_
     with runner.isolated_filesystem():
         with open("netrc", "w") as f:
             f.write("previous config")
+        runner.invoke(cli.login, [DUMMY_API_KEY])
         result = runner.invoke(cli.init, input="%s\nvanpelt\n" % DUMMY_API_KEY)
         print(result.output)
         print(result.exception)

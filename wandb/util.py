@@ -45,7 +45,6 @@ from wandb.apis import CommError
 from wandb import wandb_config
 from wandb import env
 
-
 logger = logging.getLogger(__name__)
 _not_importable = set()
 
